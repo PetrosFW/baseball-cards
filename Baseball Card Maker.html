@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<!-- saved from url=(0050)file:///C:/Users/CLymangood/Downloads/index_1.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baseball Card Maker</title>
+<style>
+  :root{
+    --grass:#EDEDE1;
+    --panel:#FFFFFF;
+    --ink:#1B2A4A;
+    --muted:#6B7280;
+    --line:#E3E2D6;
+    --clay:#C8552B;
+    --field:#1F7A4D;
+    --shadow:0 10px 30px rgba(27,42,74,.12);
+    /* card colors (player-controlled) */
+    --c1:#1746A2;   /* primary / border */
+    --c2:#E8B413;   /* secondary / accents */
+    --card-w:400px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 18% -10%, rgba(31,122,77,.10), transparent 40%),
+      radial-gradient(circle at 110% 0%, rgba(200,85,43,.08), transparent 40%),
+      var(--grass);
+    min-height:100vh;
+  }
+
+  header.top{
+    padding:22px 28px 6px;
+  }
+  .kicker{
+    font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--clay);font-weight:700;margin:0 0 4px;
+  }
+  header.top h1{
+    margin:0;font-size:30px;line-height:1.05;
+    font-family:Impact,"Haettenschweiler","Arial Narrow Bold",sans-serif;
+    letter-spacing:.01em;
+  }
+  header.top p{margin:6px 0 0;color:var(--muted);font-size:14px;max-width:60ch;}
+
+  .layout{
+    display:grid;
+    grid-template-columns: minmax(320px, 460px) 1fr;
+    gap:24px;
+    padding:18px 28px 40px;
+    align-items:start;
+  }
+  @media (max-width: 880px){
+    .layout{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Editor ---------- */
+  .editor{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .editor .pad{padding:18px 18px 8px;}
+  fieldset{
+    border:none;margin:0;padding:6px 0 14px;
+    border-bottom:1px dashed var(--line);
+  }
+  fieldset:last-of-type{border-bottom:none;}
+  legend{
+    font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--field);padding:0;margin-bottom:8px;display:flex;align-items:center;gap:8px;
+  }
+  legend .dot{width:8px;height:8px;border-radius:50%;background:var(--clay);}
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:8px 0 3px;}
+  input[type=text], input[type=number], textarea, select{
+    width:100%;font:inherit;font-size:14px;color:var(--ink);
+    padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;background:#fff;
+  }
+  input:focus, textarea:focus, select:focus{outline:none;border-color:var(--field);box-shadow:0 0 0 3px rgba(31,122,77,.15);}
+  textarea{resize:vertical;min-height:48px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+  .swatches{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px;}
+  .swatch{
+    width:30px;height:30px;border-radius:8px;border:2px solid #fff;
+    box-shadow:0 0 0 1.5px var(--line);cursor:pointer;
+  }
+  .swatch:hover{transform:translateY(-1px);}
+  .colorpick{display:flex;gap:14px;}
+  .colorpick > div{flex:1;}
+  input[type=color]{width:100%;height:34px;border:1.5px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;padding:2px;}
+
+  .photo-controls{display:flex;gap:10px;align-items:center;}
+  .filebtn{
+    display:inline-block;background:var(--field);color:#fff;font-weight:700;font-size:13px;
+    padding:9px 14px;border-radius:9px;cursor:pointer;border:none;
+  }
+  .filebtn:hover{filter:brightness(1.05);}
+  .photo-controls .hint{font-size:12px;color:var(--muted);}
+
+  /* stats editor — one block per season */
+  .season{
+    border:1.5px solid var(--line);border-radius:11px;padding:10px 11px 12px;margin-bottom:12px;
+    background:#fcfcf9;
+  }
+  .season-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .season-head .ttl{font-size:12px;font-weight:800;color:var(--field);text-transform:uppercase;letter-spacing:.06em;}
+  .season .yr-team{display:grid;grid-template-columns:90px 1fr;gap:8px;margin-bottom:8px;}
+  .statgrid-in{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:7px;}
+  .statgrid-in .cell label{margin:0 0 2px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;text-align:center;}
+  .statgrid-in .cell input{text-align:center;padding:6px 4px;font-size:13px;}
+  .season .calc{
+    display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;
+  }
+  .chip{
+    background:#eef5f0;border:1px solid #cfe4d8;color:var(--field);
+    font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;
+    font-family:"Courier New",monospace;
+  }
+  .chip span{color:#1b2a4a;}
+  .rm{
+    border:none;background:#fbe7e0;color:var(--clay);font-weight:800;border-radius:7px;
+    padding:3px 9px;cursor:pointer;font-size:12px;
+  }
+  .rm:hover{background:var(--clay);color:#fff;}
+  .add-year{
+    margin-top:10px;background:#fff;border:1.5px dashed var(--field);color:var(--field);
+    font-weight:700;font-size:13px;padding:8px 12px;border-radius:9px;cursor:pointer;width:100%;
+  }
+  .add-year:hover{background:rgba(31,122,77,.08);}
+
+  /* ---------- Stage ---------- */
+  .stage{position:sticky;top:14px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .btn{
+    font:inherit;font-weight:800;font-size:14px;border:none;border-radius:11px;
+    padding:11px 18px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn.primary{background:var(--clay);color:#fff;box-shadow:0 6px 16px rgba(200,85,43,.3);}
+  .btn.primary:hover{filter:brightness(1.05);}
+  .btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink);}
+  .btn.ghost:hover{border-color:var(--field);color:var(--field);}
+
+  .card-scale{ }
+
+  /* ---------- The Card ---------- */
+  .flip{
+    width:var(--card-w);
+    aspect-ratio:2.5/3.5;
+    perspective:1500px;
+  }
+  .flip-inner{
+    position:relative;width:100%;height:100%;
+    transition:transform .6s cubic-bezier(.2,.7,.2,1);
+    transform-style:preserve-3d;
+  }
+  .flip.show-back .flip-inner{transform:rotateY(180deg);}
+
+  .face{
+    position:absolute;inset:0;
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;
+    border-radius:14px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .back{transform:rotateY(180deg);}
+
+  /* base sizing: all inner spacing in em scales with card width */
+  .card{
+    font-size:calc(var(--card-w)/26);
+    width:100%;height:100%;
+    background:var(--c1);
+    padding:.5em;
+    display:flex;flex-direction:column;
+  }
+
+  /* FRONT */
+  .front-inner{
+    background:#fff;border-radius:.5em;flex:1;display:flex;flex-direction:column;overflow:hidden;
+    border:.14em solid var(--c2);
+  }
+  .photo{
+    flex:1;min-height:0;position:relative;
+    background:
+      linear-gradient(160deg, color-mix(in srgb, var(--c1) 70%, #fff) 0%, var(--c1) 100%);
+    display:flex;align-items:center;justify-content:center;
+    background-size:cover;background-position:center;
+  }
+  .photo .placeholder{color:#fff;text-align:center;opacity:.92;}
+  .photo .placeholder .ball{font-size:2.6em;line-height:1;}
+  .photo .placeholder .txt{font-size:.62em;letter-spacing:.06em;text-transform:uppercase;margin-top:.3em;font-weight:700;}
+  .pos-badge{
+    position:absolute;top:.4em;right:.4em;
+    background:var(--c2);color:#14213d;font-weight:900;
+    font-size:.62em;padding:.35em .55em;border-radius:.5em;
+    text-transform:uppercase;letter-spacing:.04em;box-shadow:0 .15em .4em rgba(0,0,0,.25);
+  }
+  .team-strip{
+    background:var(--c2);color:#14213d;text-align:center;font-weight:800;
+    font-size:.6em;letter-spacing:.12em;text-transform:uppercase;padding:.35em 0;
+  }
+  .name-banner{
+    background:var(--c1);color:#fff;text-align:center;padding:.35em .4em .5em;
+  }
+  .name-banner .nm{
+    font-family:Impact,"Haettenschweiler","Arial Narrow Bold",sans-serif;
+    font-size:1.5em;line-height:.95;letter-spacing:.01em;text-transform:uppercase;
+    word-break:break-word;
+  }
+
+  /* BACK */
+  .back .card{background:var(--c1);}
+  .back-inner{
+    background:#fbfaf3;border-radius:.5em;flex:1;display:flex;flex-direction:column;
+    padding:.55em;color:#222;overflow:hidden;
+    border:.14em solid var(--c2);
+  }
+  .back-head{display:flex;justify-content:space-between;align-items:baseline;gap:.4em;border-bottom:.12em solid var(--c1);padding-bottom:.3em;}
+  .back-head .bname{font-weight:900;font-size:.92em;text-transform:uppercase;letter-spacing:.02em;color:var(--c1);line-height:1;}
+  .back-head .cardno{font-size:.6em;font-weight:800;color:#555;white-space:nowrap;}
+  .vitals{display:flex;flex-wrap:wrap;gap:.15em .8em;font-size:.56em;margin:.4em 0;color:#333;}
+  .vitals b{color:#000;}
+  .grid-title{font-size:.55em;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--c1);margin:.1em 0 .2em;}
+  table.statgrid{width:100%;border-collapse:collapse;table-layout:fixed;font-family:"Courier New",ui-monospace,monospace;font-size:.46em;}
+  table.statgrid th{background:var(--c1);color:#fff;font-weight:700;padding:.25em .04em;text-align:center;overflow:hidden;}
+  table.statgrid td{padding:.22em .04em;text-align:center;border-bottom:.5px solid #d8d6c4;overflow:hidden;}
+  table.statgrid tr:nth-child(even) td{background:rgba(31,122,77,.06);}
+  table.statgrid td.yr{font-weight:700;}
+  table.statgrid .col-tm{width:13%;}
+  table.statgrid .col-yr{width:9%;}
+  .summary-box{
+    margin:.4em 0 .15em;font-size:.52em;line-height:1.28;color:#2b2b2b;
+  }
+  .summary-box .lbl{
+    display:block;font-weight:800;color:var(--c1);text-transform:uppercase;
+    letter-spacing:.07em;font-size:.92em;margin-bottom:.12em;
+  }
+  .funfact{
+    margin-top:.45em;background:#fff;border:.1em dashed var(--c1);border-radius:.4em;
+    padding:.4em .5em;font-size:.52em;color:#333;
+  }
+  .funfact b{color:var(--c1);text-transform:uppercase;letter-spacing:.06em;font-size:.9em;}
+
+  .note{font-size:12px;color:var(--muted);text-align:center;max-width:34ch;}
+
+  /* ---------- PRINT ---------- */
+  @media print{
+    body{background:#fff;}
+    header.top, .editor, .toolbar, .note{display:none !important;}
+    .layout{display:block;padding:0;}
+    .stage{position:static;gap:0;display:block;}
+    @page{margin:0.4in;}
+
+    .flip{perspective:none;width:auto;aspect-ratio:auto;}
+    .flip-inner{transform:none !important;transform-style:flat;}
+    .face{
+      position:static;backface-visibility:visible;-webkit-backface-visibility:visible;
+      box-shadow:none;border-radius:0;
+      width:2.5in;height:3.5in;
+      page-break-inside:avoid;break-inside:avoid;
+      outline:1px dashed #bbb;       /* cut guide */
+      margin:0 0 .3in 0;
+      display:block;
+    }
+    .back{transform:none !important;}
+    .card{font-size:calc(2.5in / 26);}
+    .print-only-block{display:block;}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <p class="kicker">Type · Enter · Print</p>
+  <h1>Baseball Card Maker</h1>
+  <p>Fill in the boxes on the left and watch your card build itself on the right. When it looks great, hit <b>Print Card</b> — it prints at real card size (2.5"×3.5") so you can cut it out.</p>
+</header>
+
+<div class="layout">
+
+  <!-- ================= EDITOR ================= -->
+  <section class="editor">
+    <div class="pad">
+
+      <fieldset>
+        <legend><span class="dot"></span>Player</legend>
+        <label for="f-name">Player name</label>
+        <input id="f-name" type="text" placeholder="e.g. Rocky Thunderbolt" data-key="name">
+        <div class="row">
+          <div>
+            <label for="f-team">Team</label>
+            <input id="f-team" type="text" placeholder="Sluggers" data-key="team">
+          </div>
+          <div>
+            <label for="f-pos">Position</label>
+            <input id="f-pos" type="text" placeholder="CF" data-key="pos" maxlength="6">
+          </div>
+        </div>
+        <label for="f-cardno">Card number</label>
+        <input id="f-cardno" type="text" placeholder="No. 24" data-key="cardno" maxlength="14">
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="dot"></span>Team Colors</legend>
+        <label>Pick a quick combo</label>
+        <div class="swatches" id="swatches"><div class="swatch" title="Use these colors" style="background: linear-gradient(135deg, rgb(23, 70, 162) 0px, rgb(23, 70, 162) 50%, rgb(232, 180, 19) 50%, rgb(232, 180, 19) 100%);"></div><div class="swatch" title="Use these colors" style="background: linear-gradient(135deg, rgb(200, 16, 46) 0px, rgb(200, 16, 46) 50%, rgb(12, 35, 64) 50%, rgb(12, 35, 64) 100%);"></div><div class="swatch" title="Use these colors" style="background: linear-gradient(135deg, rgb(12, 35, 64) 0px, rgb(12, 35, 64) 50%, rgb(255, 255, 255) 50%, rgb(255, 255, 255) 100%);"></div><div class="swatch" title="Use these colors" style="background: linear-gradient(135deg, rgb(39, 37, 31) 0px, rgb(39, 37, 31) 50%, rgb(253, 184, 39) 50%, rgb(253, 184, 39) 100%);"></div><div class="swatch" title="Use these colors" style="background: linear-gradient(135deg, rgb(0, 92, 92) 0px, rgb(0, 92, 92) 50%, rgb(235, 110, 31) 50%, rgb(235, 110, 31) 100%);"></div><div class="swatch" title="Use these colors" style="background: linear-gradient(135deg, rgb(19, 39, 79) 0px, rgb(19, 39, 79) 50%, rgb(206, 17, 65) 50%, rgb(206, 17, 65) 100%);"></div><div class="swatch" title="Use these colors" style="background: linear-gradient(135deg, rgb(47, 36, 29) 0px, rgb(47, 36, 29) 50%, rgb(121, 224, 238) 50%, rgb(121, 224, 238) 100%);"></div><div class="swatch" title="Use these colors" style="background: linear-gradient(135deg, rgb(111, 38, 61) 0px, rgb(111, 38, 61) 50%, rgb(0, 56, 49) 50%, rgb(0, 56, 49) 100%);"></div></div>
+        <div class="colorpick">
+          <div>
+            <label for="f-c1">Main color</label>
+            <input id="f-c1" type="color" value="#1746A2" data-color="1">
+          </div>
+          <div>
+            <label for="f-c2">Trim color</label>
+            <input id="f-c2" type="color" value="#E8B413" data-color="2">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="dot"></span>Photo</legend>
+        <div class="photo-controls">
+          <label class="filebtn" for="f-photo">Choose photo</label>
+          <input id="f-photo" type="file" accept="image/*" style="display:none">
+          <span class="hint" id="photo-hint">Optional — a drawing or photo works great</span>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="dot"></span>Vitals</legend>
+        <div class="row">
+          <div>
+            <label for="f-bats">Bats</label>
+            <select id="f-bats" data-key="bats">
+              <option>Right</option><option>Left</option><option>Switch</option>
+            </select>
+          </div>
+          <div>
+            <label for="f-throws">Throws</label>
+            <select id="f-throws" data-key="throws">
+              <option>Right</option><option>Left</option>
+            </select>
+          </div>
+        </div>
+        <div class="row-3">
+          <div>
+            <label for="f-ht">Height</label>
+            <input id="f-ht" type="text" placeholder="5-9" data-key="ht" maxlength="6">
+          </div>
+          <div>
+            <label for="f-wt">Weight</label>
+            <input id="f-wt" type="text" placeholder="160" data-key="wt" maxlength="6">
+          </div>
+          <div>
+            <label for="f-born">Born</label>
+            <input id="f-born" type="text" placeholder="2012" data-key="born" maxlength="10">
+          </div>
+        </div>
+        <label for="f-home">Hometown</label>
+        <input id="f-home" type="text" placeholder="Bloomington, MN" data-key="home">
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="dot"></span>Career Summary</legend>
+        <label for="f-summary">The player's story &amp; key highlights</label>
+        <textarea id="f-summary" rows="4" placeholder="Tell the player&#39;s story: what teams he played for, how he improved, his biggest moments and awards..." data-key="summary"></textarea>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="dot"></span>Fun Fact</legend>
+        <textarea id="f-fact" placeholder="Rocky once hit three home runs in one game!" data-key="fact"></textarea>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="dot"></span>Stats By Year</legend>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Add a block for each season and type the numbers. <b>AVG, OBP, and SLG fill in by themselves</b> from what you enter.</p>
+        <div id="stat-rows"><div class="season"><div class="season-head"><span class="ttl">Season 1</span><button class="rm">Remove</button></div><div class="yr-team"><div class="cell"><label>Year</label><input type="text" placeholder="2026"></div><div class="cell"><label>Team</label><input type="text" placeholder="Team"></div></div><div class="statgrid-in"><div class="cell"><label>G</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>AB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>R</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>H</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>2B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>3B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>HR</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>RBI</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>BB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SO</label><input type="number" min="0" placeholder="0"></div></div><div class="calc"><span class="chip">AVG&nbsp;<span>.288</span></span><span class="chip">OBP&nbsp;<span>.362</span></span><span class="chip">SLG&nbsp;<span>.442</span></span></div></div><div class="season"><div class="season-head"><span class="ttl">Season 2</span><button class="rm">Remove</button></div><div class="yr-team"><div class="cell"><label>Year</label><input type="text" placeholder="2026"></div><div class="cell"><label>Team</label><input type="text" placeholder="Team"></div></div><div class="statgrid-in"><div class="cell"><label>G</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>AB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>R</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>H</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>2B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>3B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>HR</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>RBI</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>BB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SO</label><input type="number" min="0" placeholder="0"></div></div><div class="calc"><span class="chip">AVG&nbsp;<span>.367</span></span><span class="chip">OBP&nbsp;<span>.449</span></span><span class="chip">SLG&nbsp;<span>.633</span></span></div></div><div class="season"><div class="season-head"><span class="ttl">Season 3</span><button class="rm">Remove</button></div><div class="yr-team"><div class="cell"><label>Year</label><input type="text" placeholder="2026"></div><div class="cell"><label>Team</label><input type="text" placeholder="Team"></div></div><div class="statgrid-in"><div class="cell"><label>G</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>AB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>R</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>H</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>2B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>3B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>HR</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>RBI</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>BB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SO</label><input type="number" min="0" placeholder="0"></div></div><div class="calc"><span class="chip">AVG&nbsp;<span>.371</span></span><span class="chip">OBP&nbsp;<span>.457</span></span><span class="chip">SLG&nbsp;<span>.729</span></span></div></div><div class="season"><div class="season-head"><span class="ttl">Season 4</span><button class="rm">Remove</button></div><div class="yr-team"><div class="cell"><label>Year</label><input type="text" placeholder="2026"></div><div class="cell"><label>Team</label><input type="text" placeholder="Team"></div></div><div class="statgrid-in"><div class="cell"><label>G</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>AB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>R</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>H</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>2B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>3B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>HR</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>RBI</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>BB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SO</label><input type="number" min="0" placeholder="0"></div></div><div class="calc"><span class="chip">AVG&nbsp;<span>.400</span></span><span class="chip">OBP&nbsp;<span>.489</span></span><span class="chip">SLG&nbsp;<span>.800</span></span></div></div><div class="season"><div class="season-head"><span class="ttl">Season 5</span><button class="rm">Remove</button></div><div class="yr-team"><div class="cell"><label>Year</label><input type="text" placeholder="2026"></div><div class="cell"><label>Team</label><input type="text" placeholder="Team"></div></div><div class="statgrid-in"><div class="cell"><label>G</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>AB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>R</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>H</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>2B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>3B</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>HR</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>RBI</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>BB</label><input type="number" min="0" placeholder="0"></div><div class="cell"><label>SO</label><input type="number" min="0" placeholder="0"></div></div><div class="calc"><span class="chip">AVG&nbsp;<span>.427</span></span><span class="chip">OBP&nbsp;<span>.520</span></span><span class="chip">SLG&nbsp;<span>.902</span></span></div></div></div>
+        <button class="add-year" id="add-year">＋ Add a season</button>
+      </fieldset>
+
+    </div>
+  </section>
+
+  <!-- ================= STAGE ================= -->
+  <section class="stage">
+    <div class="toolbar">
+      <button class="btn ghost" id="flip-btn">🔄 Flip card</button>
+      <button class="btn primary" id="print-btn">🖨️ Print card</button>
+      <button class="btn ghost" id="clear-btn">🧹 Start fresh</button>
+    </div>
+
+    <div class="flip" id="flip">
+      <div class="flip-inner">
+        <!-- FRONT -->
+        <div class="face front">
+          <div class="card">
+            <div class="front-inner">
+              <div class="photo" id="photo" style="background-image: none;">
+                <span class="pos-badge" id="v-pos">CF</span>
+                <div class="placeholder" id="photo-ph" style="display: block;">
+                  <div class="ball">⚾</div>
+                  <div class="txt">Add a photo</div>
+                </div>
+              </div>
+              <div class="team-strip" id="v-team">Sluggers</div>
+              <div class="name-banner">
+                <div class="nm" id="v-name">Rocky Thunderbolt</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- BACK -->
+        <div class="face back">
+          <div class="card">
+            <div class="back-inner">
+              <div class="back-head">
+                <div class="bname" id="b-name">Rocky Thunderbolt</div>
+                <div class="cardno" id="b-cardno">No. 24</div>
+              </div>
+              <div class="vitals" id="b-vitals"><span><b>Bats:</b> Right</span><span><b>Throws:</b> Right</span><span><b>Ht:</b> 5-9</span><span><b>Wt:</b> 160</span><span><b>Born:</b> 2012</span><span><b>Home:</b> Bloomington, MN</span></div>
+              <div class="summary-box"><span class="lbl">Career Summary</span><span id="b-summary">Rocky broke into the league with the Cubs in 2022 and was known right away for his speed on the bases. After joining the Sluggers in 2024, he got better every single season, raising his average and leading the team in stolen bases. Coaches praise his hard work, his never-give-up attitude, and his powerful swing.</span></div>
+              <div class="grid-title">Career Batting</div>
+              <table class="statgrid">
+                <thead>
+                  <tr>
+                    <th class="col-yr">YR</th><th class="col-tm">TM</th><th>G</th><th>AB</th><th>R</th><th>H</th>
+                    <th>2B</th><th>3B</th><th>HR</th><th>RBI</th><th>SB</th><th>BB</th><th>SO</th>
+                    <th>AVG</th><th>OBP</th><th>SLG</th>
+                  </tr>
+                </thead>
+                <tbody id="b-stats">
+        <tr>
+          <td class="yr">2022</td>
+          <td>Cubs</td>
+          <td>16</td>
+          <td>52</td>
+          <td>9</td>
+          <td>15</td>
+          <td>3</td>
+          <td>1</td>
+          <td>1</td>
+          <td>8</td>
+          <td>4</td>
+          <td>6</td>
+          <td>14</td>
+          <td>.288</td>
+          <td>.362</td>
+          <td>.442</td>
+        </tr>
+        <tr>
+          <td class="yr">2023</td>
+          <td>Cubs</td>
+          <td>18</td>
+          <td>60</td>
+          <td>14</td>
+          <td>22</td>
+          <td>5</td>
+          <td>1</td>
+          <td>3</td>
+          <td>15</td>
+          <td>7</td>
+          <td>9</td>
+          <td>12</td>
+          <td>.367</td>
+          <td>.449</td>
+          <td>.633</td>
+        </tr>
+        <tr>
+          <td class="yr">2024</td>
+          <td>Sluggers</td>
+          <td>20</td>
+          <td>70</td>
+          <td>18</td>
+          <td>26</td>
+          <td>6</td>
+          <td>2</td>
+          <td>5</td>
+          <td>20</td>
+          <td>9</td>
+          <td>11</td>
+          <td>15</td>
+          <td>.371</td>
+          <td>.457</td>
+          <td>.729</td>
+        </tr>
+        <tr>
+          <td class="yr">2025</td>
+          <td>Sluggers</td>
+          <td>22</td>
+          <td>75</td>
+          <td>21</td>
+          <td>30</td>
+          <td>8</td>
+          <td>2</td>
+          <td>6</td>
+          <td>24</td>
+          <td>12</td>
+          <td>13</td>
+          <td>11</td>
+          <td>.400</td>
+          <td>.489</td>
+          <td>.800</td>
+        </tr>
+        <tr>
+          <td class="yr">2026</td>
+          <td>Sluggers</td>
+          <td>24</td>
+          <td>82</td>
+          <td>27</td>
+          <td>35</td>
+          <td>9</td>
+          <td>3</td>
+          <td>8</td>
+          <td>29</td>
+          <td>15</td>
+          <td>16</td>
+          <td>13</td>
+          <td>.427</td>
+          <td>.520</td>
+          <td>.902</td>
+        </tr></tbody>
+              </table>
+              <div class="funfact"><b>Did you know?</b> <span id="b-fact">Rocky once hit three home runs in one game!</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note">Tip: in the print box, turn on “Background graphics” if your colors don’t show up.</p>
+  </section>
+</div>
+
+<script>
+  // ---------- starter data (fictional player) ----------
+  const state = {
+    name:"Rocky Thunderbolt", team:"Sluggers", pos:"CF", cardno:"No. 24",
+    bats:"Right", throws:"Right", ht:"5-9", wt:"160", born:"2012", home:"Bloomington, MN",
+    fact:"Rocky once hit three home runs in one game!",
+    summary:"Rocky broke into the league with the Cubs in 2022 and was known right away for his speed on the bases. After joining the Sluggers in 2024, he got better every single season, raising his average and leading the team in stolen bases. Coaches praise his hard work, his never-give-up attitude, and his powerful swing.",
+    photo:null,
+    rows:[
+      {year:"2022", team:"Cubs",     g:"16", ab:"52", r:"9",  h:"15", db:"3", tp:"1", hr:"1", rbi:"8",  sb:"4",  bb:"6",  so:"14"},
+      {year:"2023", team:"Cubs",     g:"18", ab:"60", r:"14", h:"22", db:"5", tp:"1", hr:"3", rbi:"15", sb:"7",  bb:"9",  so:"12"},
+      {year:"2024", team:"Sluggers", g:"20", ab:"70", r:"18", h:"26", db:"6", tp:"2", hr:"5", rbi:"20", sb:"9",  bb:"11", so:"15"},
+      {year:"2025", team:"Sluggers", g:"22", ab:"75", r:"21", h:"30", db:"8", tp:"2", hr:"6", rbi:"24", sb:"12", bb:"13", so:"11"},
+      {year:"2026", team:"Sluggers", g:"24", ab:"82", r:"27", h:"35", db:"9", tp:"3", hr:"8", rbi:"29", sb:"15", bb:"16", so:"13"},
+    ]
+  };
+
+  const presets = [
+    ["#1746A2","#E8B413"], ["#C8102E","#0C2340"], ["#0C2340","#FFFFFF"],
+    ["#27251F","#FDB827"], ["#005C5C","#EB6E1F"], ["#13274F","#CE1141"],
+    ["#2F241D","#79E0EE"], ["#6F263D","#003831"]
+  ];
+
+  // ---------- helpers ----------
+  const $ = s => document.querySelector(s);
+  const esc = s => (s||"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const num = v => { const n = parseFloat(v); return isNaN(n)?0:n; };
+  const has = v => { const n = parseFloat(v); return !isNaN(n); };
+  const fmt3 = x => x.toFixed(3).replace(/^0/,"");          // 0.367 -> .367 , 1.05 stays 1.050
+  function avg(r){ return has(r.ab)&&num(r.ab)>0 ? fmt3(num(r.h)/num(r.ab)) : "—"; }
+  function obp(r){                                          // simplified: (H+BB)/(AB+BB)
+    const denom = num(r.ab)+num(r.bb);
+    return denom>0 ? fmt3((num(r.h)+num(r.bb))/denom) : "—";
+  }
+  function slg(r){                                          // total bases / AB
+    if(!(has(r.ab)&&num(r.ab)>0)) return "—";
+    const tb = num(r.h) + num(r.db) + 2*num(r.tp) + 3*num(r.hr);
+    return fmt3(tb/num(r.ab));
+  }
+
+  // ---------- build colour swatches ----------
+  const sw = $("#swatches");
+  presets.forEach(([a,b])=>{
+    const el = document.createElement("div");
+    el.className="swatch";
+    el.style.background = `linear-gradient(135deg, ${a} 0 50%, ${b} 50% 100%)`;
+    el.title = "Use these colors";
+    el.onclick = ()=>{ setColor(1,a); setColor(2,b); $("#f-c1").value=a; $("#f-c2").value=b; };
+    sw.appendChild(el);
+  });
+  function setColor(which, val){
+    document.documentElement.style.setProperty(which===1?"--c1":"--c2", val);
+  }
+
+  // ---------- stat row editor (one block per season) ----------
+  // [key, label]  — numeric stat cells
+  const STAT_CELLS = [
+    ["g","G"],["ab","AB"],["r","R"],["h","H"],["db","2B"],["tp","3B"],
+    ["hr","HR"],["rbi","RBI"],["sb","SB"],["bb","BB"],["so","SO"]
+  ];
+  function chipsHTML(row){
+    return `<span class="chip">AVG&nbsp;<span>${avg(row)}</span></span>`+
+           `<span class="chip">OBP&nbsp;<span>${obp(row)}</span></span>`+
+           `<span class="chip">SLG&nbsp;<span>${slg(row)}</span></span>`;
+  }
+  function renderStatEditor(){
+    const wrap = $("#stat-rows");
+    wrap.innerHTML = "";
+    state.rows.forEach((row, i)=>{
+      const block = document.createElement("div");
+      block.className = "season";
+
+      const head = document.createElement("div");
+      head.className = "season-head";
+      head.innerHTML = `<span class="ttl">Season ${i+1}</span>`;
+      const rm = document.createElement("button");
+      rm.className="rm"; rm.textContent="Remove";
+      rm.onclick = ()=>{ state.rows.splice(i,1); renderStatEditor(); renderCard(); };
+      head.appendChild(rm);
+      block.appendChild(head);
+
+      const calc = document.createElement("div");
+      calc.className = "calc";
+      calc.innerHTML = chipsHTML(row);
+
+      const onInput = (key) => (e) => {
+        row[key] = e.target.value;          // mutate same row object
+        calc.innerHTML = chipsHTML(row);     // refresh just this block's chips
+        renderCard();                        // refresh the card preview
+      };
+
+      // year + team
+      const yt = document.createElement("div");
+      yt.className = "yr-team";
+      yt.appendChild(makeCell(row,"year","Year","text","2026",onInput));
+      yt.appendChild(makeCell(row,"team","Team","text","Team",onInput));
+      block.appendChild(yt);
+
+      // stat grid
+      const grid = document.createElement("div");
+      grid.className = "statgrid-in";
+      STAT_CELLS.forEach(([key,label])=> grid.appendChild(makeCell(row,key,label,"number","0",onInput)));
+      block.appendChild(grid);
+
+      block.appendChild(calc);
+      wrap.appendChild(block);
+    });
+  }
+  function makeCell(row,key,label,type,ph,onInput){
+    const cell = document.createElement("div");
+    cell.className = "cell";
+    const lab = document.createElement("label"); lab.textContent = label;
+    const inp = document.createElement("input");
+    inp.type = type; if(type==="number") inp.min="0";
+    inp.value = row[key] || ""; inp.placeholder = ph;
+    inp.addEventListener("input", onInput(key));
+    cell.appendChild(lab); cell.appendChild(inp);
+    return cell;
+  }
+
+  // ---------- render the card ----------
+  function renderCard(){
+    $("#v-name").textContent = state.name || "Your Name";
+    $("#b-name").textContent = state.name || "Your Name";
+    $("#v-team").textContent = (state.team || "Team");
+    $("#v-pos").textContent  = (state.pos  || "—");
+    $("#b-cardno").textContent = state.cardno || "";
+
+    // photo
+    const photo = $("#photo"), ph = $("#photo-ph");
+    if(state.photo){
+      photo.style.backgroundImage = `url(${state.photo})`;
+      ph.style.display = "none";
+    } else {
+      photo.style.backgroundImage = "none";
+      ph.style.display = "block";
+    }
+
+    // vitals
+    const v = [];
+    if(state.bats)   v.push(`<span><b>Bats:</b> ${esc(state.bats)}</span>`);
+    if(state.throws) v.push(`<span><b>Throws:</b> ${esc(state.throws)}</span>`);
+    if(state.ht)     v.push(`<span><b>Ht:</b> ${esc(state.ht)}</span>`);
+    if(state.wt)     v.push(`<span><b>Wt:</b> ${esc(state.wt)}</span>`);
+    if(state.born)   v.push(`<span><b>Born:</b> ${esc(state.born)}</span>`);
+    if(state.home)   v.push(`<span><b>Home:</b> ${esc(state.home)}</span>`);
+    $("#b-vitals").innerHTML = v.join("");
+
+    // stats grid
+    const body = $("#b-stats");
+    if(state.rows.length === 0){
+      body.innerHTML = `<tr><td colspan="16" style="padding:.6em;color:#999;">Add a season on the left →</td></tr>`;
+    } else {
+      const cell = v => esc(v)||"0";
+      body.innerHTML = state.rows.map(r => `
+        <tr>
+          <td class="yr">${esc(r.year)||"—"}</td>
+          <td>${esc(r.team)||"—"}</td>
+          <td>${cell(r.g)}</td>
+          <td>${cell(r.ab)}</td>
+          <td>${cell(r.r)}</td>
+          <td>${cell(r.h)}</td>
+          <td>${cell(r.db)}</td>
+          <td>${cell(r.tp)}</td>
+          <td>${cell(r.hr)}</td>
+          <td>${cell(r.rbi)}</td>
+          <td>${cell(r.sb)}</td>
+          <td>${cell(r.bb)}</td>
+          <td>${cell(r.so)}</td>
+          <td>${avg(r)}</td>
+          <td>${obp(r)}</td>
+          <td>${slg(r)}</td>
+        </tr>`).join("");
+    }
+
+    $("#b-summary").textContent = state.summary || "Write the player's story here…";
+    $("#b-fact").textContent = state.fact || "Add a fun fact!";
+  }
+
+  // ---------- wire up text inputs ----------
+  document.querySelectorAll("[data-key]").forEach(el=>{
+    // set initial value from state
+    if(state[el.dataset.key] !== undefined && state[el.dataset.key] !== null)
+      el.value = state[el.dataset.key];
+    el.addEventListener("input", e=>{
+      state[el.dataset.key] = e.target.value;
+      renderCard();
+    });
+  });
+
+  // color pickers
+  $("#f-c1").addEventListener("input", e=> setColor(1, e.target.value));
+  $("#f-c2").addEventListener("input", e=> setColor(2, e.target.value));
+
+  // photo upload
+  $("#f-photo").addEventListener("change", e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { state.photo = ev.target.result; $("#photo-hint").textContent = "Photo added! ✔"; renderCard(); };
+    reader.readAsDataURL(file);
+  });
+
+  // buttons
+  $("#add-year").onclick = ()=>{
+    state.rows.push({year:"", team:state.team||"", g:"", ab:"", r:"", h:"", db:"", tp:"", hr:"", rbi:"", sb:"", bb:"", so:""});
+    renderStatEditor(); renderCard();
+  };
+  $("#flip-btn").onclick = ()=> $("#flip").classList.toggle("show-back");
+  $("#print-btn").onclick = ()=> window.print();
+  $("#clear-btn").onclick = ()=>{
+    if(!confirm("Clear everything and start a brand new card?")) return;
+    Object.assign(state,{name:"",team:"",pos:"",cardno:"",bats:"Right",throws:"Right",
+      ht:"",wt:"",born:"",home:"",fact:"",summary:"",photo:null,rows:[{year:"",team:"",g:"",ab:"",r:"",h:"",db:"",tp:"",hr:"",rbi:"",sb:"",bb:"",so:""}]});
+    document.querySelectorAll("[data-key]").forEach(el=>{
+      el.value = state[el.dataset.key] ?? "";
+    });
+    $("#photo-hint").textContent = "Optional — a drawing or photo works great";
+    renderStatEditor(); renderCard();
+  };
+
+  // first paint
+  renderStatEditor();
+  renderCard();
+</script>
+
+
+</body></html>
